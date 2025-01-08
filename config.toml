@@ -1,5 +1,6 @@
 [server]
-disable_background_tasks = true
+dry_run = true  # Set to false to actually perform the actions (beware old containers will be deleted)
+disable_background_tasks = false
 
 [stop_inactive]
 inactive_threshold = 900 # 15 minutes

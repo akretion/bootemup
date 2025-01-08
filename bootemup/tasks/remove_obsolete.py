@@ -4,7 +4,8 @@
 from aiohttp.web import AppKey
 from asyncio import Task, create_task, CancelledError, sleep
 from contextlib import suppress
-from datetime import datetime
+from datetime import datetime, UTC
+from traceback import print_exc
 
 
 from ..config import config
@@ -16,18 +17,25 @@ async def loop(app):
     print(f"Scheduling remove_obsolete task every {interval}s")
 
     while True:
-        print("Running remove_obsolete task")
-        containers = await get_containers()
-        for container in containers:
-            if "running" in container.status:
-                continue
+        try:
+            print("Running remove_obsolete task")
+            containers = await get_containers()
+            for container in containers:
+                if "running" in container.status:
+                    continue
 
-            await container.get_last_activity()
-            if container.last_activity is not None:
-                age = (datetime.now() - container.last_activity).total_seconds()
-                if age > config["remove_obsolete"]["obsolete_threshold"]:
-                    print(f"Removing {container.name} (inactive for {age} seconds)")
-                    await container.rm()
+                await container.get_last_activity()
+                if (
+                    container.last_activity is not None
+                    and container.last_activity != "running"
+                ):
+                    age = (datetime.now(UTC) - container.last_activity).total_seconds()
+                    if age > config["remove_obsolete"]["obsolete_threshold"]:
+                        print(f"Removing {container.name} (inactive for {age} seconds)")
+                        await container.rm()
+        except Exception:
+            print("Error in stop_inactive task:")
+            print_exc()
 
         await sleep(interval)
 

@@ -80,12 +80,10 @@ class Html:
             return
 
         if isinstance(value, (list, tuple, set)):
-            async with self.td():
-                if isinstance(value, list):
-                    async with self.ul():
-                        for val in value:
-                            async with self.li():
-                                await self(val)
+            async with self.ul():
+                for val in value:
+                    async with self.li():
+                        await self(val)
             return
         if isinstance(value, datetime):
             async with self.time(datetime=value.isoformat()):
@@ -152,14 +150,17 @@ class Html:
 
     async def _with_redirect_(self, url):
         async with self.footer():
-            await self(f'Redirecting to <a href="{url}">{url}</a>...')
+            await self("Redirecting to ")
+            async with self.a(href=url):
+                await self(url)
+            await self("…")
 
             if not url.startswith("http"):
                 # wait a bit before redirecting
                 await sleep(0.5)
             else:
                 # Wait for the client to be ready
-                for i in range(50):
+                for i in range(250):
                     await self(".")
                     async with request("GET", url) as resp:
                         if resp.status < 400:

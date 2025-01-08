@@ -1,7 +1,7 @@
 # Copyright 2025 Akretion (http://www.akretion.com).
 # @author Florian Mounier <florian.mounier@akretion.com>
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
-
+from asyncio import gather
 
 from ..container import get_containers
 from ..html import Html
@@ -51,7 +51,7 @@ async def info(request):
                                     await html("Kill")
 
         async with html.table():
-            keys = ("name", "last_access", "last_url")
+            keys = ("name", "last_activity", "last_access", "last_url")
             async with html.thead():
                 for key in keys:
                     async with html.th():
@@ -59,9 +59,11 @@ async def info(request):
 
             async with html.tbody():
                 for container in containers:
-                    await container.get_last_access()
-                    if not container.last_access:
-                        continue
+                    await gather(
+                        container.get_last_access(),
+                        container.get_last_activity(),
+                    )
+
                     async with html.tr():
                         for key in keys:
                             value = getattr(container, key)

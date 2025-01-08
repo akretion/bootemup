@@ -4,7 +4,8 @@
 from aiohttp.web import AppKey
 from asyncio import Task, create_task, CancelledError, sleep
 from contextlib import suppress
-from datetime import datetime
+from datetime import datetime, UTC
+from traceback import print_exc
 
 from ..config import config
 from ..container import get_containers
@@ -15,18 +16,22 @@ async def loop(app):
     print(f"Scheduling stop_inactive task every {interval}s")
 
     while True:
-        print("Running stop_inactive task")
-        containers = await get_containers()
-        for container in containers:
-            if "running" not in container.status:
-                continue
+        try:
+            print("Running stop_inactive task")
+            containers = await get_containers()
+            for container in containers:
+                if "running" not in container.status:
+                    continue
 
-            await container.get_last_access()
-            if container.last_access is not None:
-                age = (datetime.now() - container.last_access).total_seconds()
-                if age > config["stop_inactive"]["inactive_threshold"]:
-                    print(f"Stopping {container.name} (inactive for {age} seconds)")
-                    await container.kill()
+                await container.get_last_access()
+                if container.last_access is not None:
+                    age = (datetime.now(UTC) - container.last_access).total_seconds()
+                    if age > config["stop_inactive"]["inactive_threshold"]:
+                        print(f"Stopping {container.name} (inactive for {age} seconds)")
+                        await container.kill()
+        except Exception:
+            print("Error in stop_inactive task:")
+            print_exc()
 
         await sleep(interval)
 
