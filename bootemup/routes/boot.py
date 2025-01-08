@@ -27,7 +27,7 @@ async def boot(request):
 
             try:
                 async for log in container.logs(
-                    break_on={"running on": False, "exited with code": True}
+                    break_on={"running on": False, "exited with code": True}, tail=50
                 ):
                     await html(log)
             except Exception as e:

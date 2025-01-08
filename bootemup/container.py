@@ -137,14 +137,16 @@ class Container:
     async def kill(self):
         return await run("docker", "compose", "-p", self.name, "kill")
 
-    async def logs(self, break_on=None):
+    async def logs(self, break_on=None, tail=None):
         break_on = break_on or {}
+        tail_params = ["--tail", str(tail)] if tail else []
         process = await create_subprocess_exec(
             "docker",
             "compose",
             "-p",
             self.name,
             "logs",
+            *tail_params,
             "-f",
             stdout=PIPE,
             stderr=STDOUT,

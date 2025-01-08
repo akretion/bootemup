@@ -26,7 +26,9 @@ async def kill(request):
             await html(await container.kill())
 
             try:
-                async for log in container.logs(break_on={"exited with code": True}):
+                async for log in container.logs(
+                    break_on={"exited with code": True}, tail=50
+                ):
                     await html(log)
             except Exception as e:
                 await html(str(e))
