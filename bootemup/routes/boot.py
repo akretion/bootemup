@@ -2,8 +2,7 @@
 # @author Florian Mounier <florian.mounier@akretion.com>
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
-from asyncio.subprocess import create_subprocess_exec, PIPE, STDOUT
-from ..utils import get_infos, url_for
+from ..container import Container
 from ..html import Html
 
 
@@ -11,51 +10,30 @@ async def boot(request):
     html = Html(request)
     await html._init_()
 
-    async with html._page_():
+    async with html._page_(full_width=True):
         await html._with_scroll_()
 
-        async with html.code(style="white-space: pre-wrap;"):
+        async with html.pre("word-break: break-all;font-size: 0.9em;"):
             name = request.match_info.get("name")
-            infos = await get_infos()
-            info = next((info for info in infos if info["Name"] == name), None)
-            if not info:
-                await html(f"Unknown service {name}")
+            try:
+                container = await Container.get(name)
+            except ValueError as e:
+                await html(str(e))
                 return html.response
 
             await html(f"Booting, {name}...\n\n")
 
-            configs = [
-                arg
-                for config in info.get("ConfigFiles").split(",")
-                for arg in ["-f", config]
-            ]
+            await html(await container.boot())
 
-            process = await create_subprocess_exec(
-                "docker", "compose", *configs, "up", "-d", stdout=PIPE, stderr=STDOUT
-            )
-            stdout, _ = await process.communicate()
+            try:
+                async for log in container.logs(
+                    break_on={"running on": False, "exited with code": True}
+                ):
+                    await html(log)
+            except Exception as e:
+                await html(str(e))
+                return html.response
 
-            if stdout:
-                await html(stdout)
+        await html._with_redirect_(container.url)
 
-            process = await create_subprocess_exec(
-                "docker", "compose", *configs, "logs", "-f", stdout=PIPE, stderr=STDOUT
-            )
-
-            backlog = b""
-            while True:
-                stdout = await process.stdout.read(256)
-                if stdout:
-                    backlog += stdout
-                    await html(stdout)
-                    if b"running on" in backlog:
-                        process.terminate()
-                    if b"exited with code" in backlog:
-                        process.terminate()
-                        return html.response
-                else:
-                    break
-
-        await html._with_redirect_(url_for(name))
-
-        return html.response
+    return html.response

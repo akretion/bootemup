@@ -2,7 +2,5 @@
 # @author Florian Mounier <florian.mounier@akretion.com>
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
-from .boot import boot as boot
-from .kill import kill as kill
-from .info import info as info
-from .logs import logs as logs
+from .remove_obsolete import remove_obsolete as remove_obsolete
+from .stop_inactive import stop_inactive as stop_inactive

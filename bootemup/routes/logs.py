@@ -6,7 +6,7 @@ from ..container import Container
 from ..html import Html
 
 
-async def kill(request):
+async def logs(request):
     html = Html(request)
     await html._init_()
 
@@ -21,17 +21,11 @@ async def kill(request):
                 await html(str(e))
                 return html.response
 
-            await html(f"Killing, {name}...\n\n")
-
-            await html(await container.kill())
-
             try:
-                async for log in container.logs(break_on={"exited with code": True}):
+                async for log in container.logs():
                     await html(log)
             except Exception as e:
                 await html(str(e))
                 return html.response
-
-        await html._with_redirect_("/")
 
     return html.response

@@ -6,6 +6,7 @@ from aiohttp import web, request
 from contextlib import asynccontextmanager
 from asyncio import sleep
 from inspect import cleandoc as dedent
+from datetime import datetime
 
 
 class Html:
@@ -29,6 +30,17 @@ class Html:
     def __init__(self, request):
         self.request = request
 
+    async def _init_(self):
+        response = web.StreamResponse(
+            status=200,
+            headers={
+                "Content-Type": "text/html",
+                "Cache-Control": "max-age=0, no-cache, must-revalidate, proxy-revalidate",
+            },
+        )
+        await response.prepare(self.request)
+        self.response = response
+
     async def __tag__(self, name, state, *args, **kwargs):
         if state == "close":
             await self(f"</{name}>")
@@ -42,14 +54,6 @@ class Html:
             tag += " /"
 
         await self(f"<{tag}>")
-
-    async def _init_(self):
-        response = web.StreamResponse(
-            status=200,
-            headers={"Content-Type": "text/html"},
-        )
-        await response.prepare(self.request)
-        self.response = response
 
     def __getattr__(self, name):
         if name.startswith("_") or name in dir(self):
@@ -72,21 +76,60 @@ class Html:
         return tag
 
     async def __call__(self, value):
+        if value is None:
+            return
+
+        if isinstance(value, (list, tuple, set)):
+            async with self.td():
+                if isinstance(value, list):
+                    async with self.ul():
+                        for val in value:
+                            async with self.li():
+                                await self(val)
+            return
+        if isinstance(value, datetime):
+            async with self.time(datetime=value.isoformat()):
+                await self(value.strftime("%Y-%m-%d %H:%M:%S"))
+            return
+
         if isinstance(value, str):
             value = value.encode("utf-8")
+
         await self.response.write(value)
 
     @asynccontextmanager
-    async def _page_(self):
+    async def _page_(self, full_width=False):
         try:
             async with self.html():
                 async with self.head():
+                    # Alternative: "https://cdn.simplecss.org/simple.min.css"
+                    await self.meta(charset="utf-8")
                     await self.link(
                         rel="stylesheet",
-                        href="https://cdn.simplecss.org/simple.min.css",
+                        href="https://unpkg.com/sakura.css/css/sakura.css",
+                        media="screen",
                     )
-
-                async with self.body():
+                    await self.link(
+                        rel="stylesheet",
+                        href="https://unpkg.com/sakura.css/css/sakura-dark.css",
+                        media="screen and (prefers-color-scheme: dark)",
+                    )
+                    async with self.script():
+                        # Try to prevent browser bfcache
+                        await self(
+                            dedent(
+                                """
+                                window.addEventListener('pageshow', (event) => {
+                                    if (event.persisted) {
+                                    location.reload(true);
+                                    }
+                                });
+                                """
+                            )
+                        )
+                async with self.body(
+                    **({"style": "max-width: 90%;"} if full_width else {})
+                ):
                     yield
         finally:
             await self.response.write_eof()
@@ -96,7 +139,7 @@ class Html:
             await self(
                 dedent("""
                 const autoScroll = setInterval(() => {
-                       window.scrollTo(0, document.body.scrollHeight);
+                       window.scrollTo({top: document.body.scrollHeight, behavior: 'instant' });
                 }, 17);
                 window.addEventListener('wheel', () => {
                        clearInterval(autoScroll);
