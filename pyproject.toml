@@ -11,4 +11,5 @@ dependencies = [
 [dependency-groups]
 dev = [
     "aiohttp-devtools>=1.1.2",
+    "ruff>=0.8.6",
 ]
