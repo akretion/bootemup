@@ -26,7 +26,7 @@ async def loop(app):
                 age = (datetime.now() - container.last_access).total_seconds()
                 if age > config["stop_inactive"]["inactive_threshold"]:
                     print(f"Stopping {container.name} (inactive for {age} seconds)")
-                    await container.stop()
+                    await container.kill()
 
         await sleep(interval)
 

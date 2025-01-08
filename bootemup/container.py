@@ -6,6 +6,8 @@ from asyncio.subprocess import create_subprocess_exec, PIPE, STDOUT
 import re
 from datetime import datetime
 
+from .config import config
+
 
 async def get_containers():
     process = await create_subprocess_exec(
@@ -49,8 +51,12 @@ class Container:
 
     @property
     def url(self):
-        # FIXME
-        return f"http://{self.name}.localhost"
+        for rexp, url in config["urls"].items():
+            rex = re.compile(rexp)
+            if rex.match(self.name):
+                return rex.sub(url, self.name)
+
+        raise ValueError(f"No url match found for {self.name}")
 
     async def boot(self):
         process = await create_subprocess_exec(
@@ -61,13 +67,6 @@ class Container:
             "-d",
             stdout=PIPE,
             stderr=STDOUT,
-        )
-        stdout, _ = await process.communicate()
-        return stdout
-
-    async def stop(self):
-        process = await create_subprocess_exec(
-            "docker", "compose", *self._configs(), "down", stdout=PIPE, stderr=STDOUT
         )
         stdout, _ = await process.communicate()
         return stdout
@@ -89,7 +88,7 @@ class Container:
 
     async def kill(self):
         process = await create_subprocess_exec(
-            "docker", "compose", *self._configs(), "kill", stdout=PIPE, stderr=STDOUT
+            "docker", "compose", "-p", self.name, "kill", stdout=PIPE, stderr=STDOUT
         )
         stdout, _ = await process.communicate()
         return stdout
@@ -99,7 +98,8 @@ class Container:
         process = await create_subprocess_exec(
             "docker",
             "compose",
-            *self._configs(),
+            "-p",
+            self.name,
             "logs",
             "-f",
             stdout=PIPE,

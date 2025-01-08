@@ -9,5 +9,8 @@ check_interval = 60      # 1 minute
 obsolete_threshold = 1728000 # 20 days
 check_interval = 3600        # 1 hour
 
-[custom_urls]
+[urls]
 custom_container_name = "https://custom.example.com/container"
+"custom_(.+)" = "https://example.com/\\1"
+"traefik-template" = "http://localhost:8080"
+"(.+)" = "http://\\1.localhost"
