@@ -203,7 +203,9 @@ class Container:
             r".*\| (?P<timestamp>(:?\d|-)+ (:?\d|-|:)+)(?:,\d+)? \d+ .+ "
             r"running on (?P<url>\S+).*"
         )
-
+        exclude_urls = [
+            re.compile(rex) for rex in config["stop_inactive"]["exclude_urls"]
+        ]
         stdout = await run(
             "docker",
             "compose",
@@ -217,10 +219,14 @@ class Container:
             if not match:
                 match = startup_re.match(line)
             if match:
+                url = match.group("url")
+                if any(rex.match(url) for rex in exclude_urls):
+                    continue
+
                 date = datetime.fromisoformat(match.group("timestamp"))
                 # assuming logs are in UTC
                 date = date.replace(tzinfo=UTC)
-                self.last_url = match.group("url")
+                self.last_url = url
                 self.last_access = date
                 return
 
