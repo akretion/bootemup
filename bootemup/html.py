@@ -164,13 +164,22 @@ class Html:
                 await sleep(1)
             else:
                 # Wait for the client to be ready
-                for i in range(250):
-                    await self(".")
-                    async with request("GET", url) as resp:
-                        if resp.status < 400:
-                            break
+                try:
+                    for i in range(250):
+                        await self(".")
+                        async with request("GET", url) as resp:
+                            if resp.status < 400:
+                                break
 
-                    await sleep(0.25)
+                        await sleep(0.25)
+                except Exception as e:
+                    async with self._code_():
+                        await self("Can't access server: ")
+                        await self(str(e))
+                        await self("Waiting 3 seconds instead")
+                        for i in range(3):
+                            await self(".")
+                            await sleep(1)
 
         async with self.script():
             await self(
