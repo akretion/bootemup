@@ -42,10 +42,6 @@ async def info(request):
                                     style=link, href=f"/start/{container.name}"
                                 ):
                                     await html("Start")
-                                async with html.a(
-                                    style=link, href=f"/start/{container.name}/boot"
-                                ):
-                                    await html("Reboot")
                             if "running" in container.status:
                                 async with html.a(style=link, href=container.url):
                                     await html("Open")

@@ -150,7 +150,8 @@ class Container:
         return await run(
             "docker",
             "compose",
-            *self._configs(),
+            "-p",
+            self.name,
             "down",
             "--rmi",
             "local",
