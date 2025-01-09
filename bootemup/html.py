@@ -142,7 +142,7 @@ class Html:
             style="display: flex;"
             "flex-direction: column-reverse;"
             "overflow-y: auto;"
-            "max-height: 100%;"
+            "max-height: 98%;"
             "word-break: break-all;"
             "font-size: 0.8em;"
         ):
