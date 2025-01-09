@@ -142,7 +142,7 @@ class Html:
             style="display: flex;"
             "flex-direction: column-reverse;"
             "overflow-y: auto;"
-            "max-height: 90vh;"
+            "max-height: 100%;"
             "word-break: break-all;"
             "font-size: 0.8em;"
         ):
@@ -174,9 +174,9 @@ class Html:
                         await sleep(0.25)
                 except Exception as e:
                     async with self._code_():
-                        await self("Can't access server: ")
+                        await self("Can't access server: \n")
                         await self(str(e))
-                        await self("Waiting 3 seconds instead")
+                        await self("\n\nWaiting 3 seconds instead")
                         for i in range(3):
                             await self(".")
                             await sleep(1)
