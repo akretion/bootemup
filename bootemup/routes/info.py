@@ -39,19 +39,23 @@ async def info(request):
                                 await html("Logs")
                             if "exited" in container.status:
                                 async with html.a(
-                                    style=link, href=f"/boot/{container.name}"
+                                    style=link, href=f"/start/{container.name}"
                                 ):
-                                    await html("Boot")
+                                    await html("Start")
+                                async with html.a(
+                                    style=link, href=f"/start/{container.name}/boot"
+                                ):
+                                    await html("Reboot")
                             if "running" in container.status:
                                 async with html.a(style=link, href=container.url):
                                     await html("Open")
                                 async with html.a(
-                                    style=link, href=f"/kill/{container.name}"
+                                    style=link, href=f"/stop/{container.name}"
                                 ):
-                                    await html("Kill")
+                                    await html("Stop")
 
         async with html.table():
-            keys = ("name", "last_activity", "last_access", "last_url")
+            keys = ("name", "flags", "last_activity", "last_access", "last_url")
             async with html.thead():
                 for key in keys:
                     async with html.th():

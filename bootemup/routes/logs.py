@@ -11,9 +11,7 @@ async def logs(request):
     await html._init_()
 
     async with html._page_(full_width=True):
-        await html._with_scroll_()
-
-        async with html.pre("word-break: break-all;font-size: 0.9em;"):
+        async with html._code_():
             name = request.match_info.get("name")
             try:
                 container = await Container.get(name)

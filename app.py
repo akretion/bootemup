@@ -4,7 +4,7 @@
 
 from aiohttp import web
 from bootemup.config import config
-from bootemup.routes import info, boot, kill, logs
+from bootemup.routes import info, start, stop, logs
 from bootemup.tasks import remove_obsolete, stop_inactive
 
 
@@ -12,8 +12,9 @@ app = web.Application()
 app.add_routes(
     [
         web.get("/", info),
-        web.get("/boot/{name}", boot),
-        web.get("/kill/{name}", kill),
+        web.get("/start/{name}", start),
+        web.get("/start/{name}/boot", start),
+        web.get("/stop/{name}", stop),
         web.get("/logs/{name}", logs),
     ]
 )

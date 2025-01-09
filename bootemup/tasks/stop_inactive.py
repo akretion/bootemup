@@ -20,15 +20,21 @@ async def loop(app):
             print("Running stop_inactive task")
             containers = await get_containers()
             for container in containers:
-                if "running" not in container.status:
+                if (
+                    not container.has_remove_obsolete_label
+                    or "running" not in container.status
+                ):
                     continue
 
                 await container.get_last_access()
-                if container.last_access is not None:
+                if (
+                    container.last_access is not None
+                    and container.last_access != "never"
+                ):
                     age = (datetime.now(UTC) - container.last_access).total_seconds()
                     if age > config["stop_inactive"]["inactive_threshold"]:
                         print(f"Stopping {container.name} (inactive for {age} seconds)")
-                        await container.kill()
+                        await container.stop()
         except Exception:
             print("Error in stop_inactive task:")
             print_exc()

@@ -1,19 +1,18 @@
 # Copyright 2025 Akretion (http://www.akretion.com).
 # @author Florian Mounier <florian.mounier@akretion.com>
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
+from asyncio import gather
 
 from ..container import Container
 from ..html import Html
 
 
-async def kill(request):
+async def stop(request):
     html = Html(request)
     await html._init_()
 
     async with html._page_(full_width=True):
-        await html._with_scroll_()
-
-        async with html.pre("word-break: break-all;font-size: 0.9em;"):
+        async with html._code_():
             name = request.match_info.get("name")
             try:
                 container = await Container.get(name)
@@ -21,15 +20,20 @@ async def kill(request):
                 await html(str(e))
                 return html.response
 
-            await html(f"Killing, {name}...\n\n")
+            await html(f"Stopping, {name}...\n\n")
 
-            await html(await container.kill())
-
-            try:
+            async def log():
                 async for log in container.logs(
-                    break_on={"exited with code": True}, tail=50
+                    break_on={"exited with code": False}, tail=1
                 ):
                     await html(log)
+
+            async def stop():
+                async for log in (await container.stop(stream=True))():
+                    await html(log)
+
+            try:
+                await gather(log(), stop())
             except Exception as e:
                 await html(str(e))
                 return html.response

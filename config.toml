@@ -5,10 +5,12 @@ disable_background_tasks = false
 [stop_inactive]
 inactive_threshold = 900 # 15 minutes
 check_interval = 60      # 1 minute
+label = "com.akretion.bootemup.stop_inactive"
 
 [remove_obsolete]
 obsolete_threshold = 1728000 # 20 days
 check_interval = 3600        # 1 hour
+label = "com.akretion.bootemup.remove_obsolete"
 
 [urls]
 custom_container_name = "https://custom.example.com/container"

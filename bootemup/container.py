@@ -27,7 +27,7 @@ async def get_containers():
 
     ls = json.loads(compose_out)
 
-    docker_containers = defaultdict(list)
+    images = defaultdict(list)
 
     containers = [
         json.loads(container)
@@ -47,7 +47,7 @@ async def get_containers():
         if "com.docker.compose.project" not in labels:
             continue
 
-        docker_containers[labels["com.docker.compose.project"]].append(
+        images[labels["com.docker.compose.project"]].append(
             {
                 "id": container["ID"],
                 "labels": labels,
@@ -71,7 +71,7 @@ async def get_containers():
             line["Name"],
             line["Status"],
             line["ConfigFiles"].split(","),
-            docker_containers[line["Name"]],
+            images[line["Name"]],
         )
         for line in ls
     ]
@@ -86,11 +86,11 @@ class Container:
             raise ValueError(f"Unknown service {name}")
         return name_containers[name]
 
-    def __init__(self, name, status, files, containers):
+    def __init__(self, name, status, files, images):
         self.name = name
         self.status = status
         self.files = files
-        self.containers = containers
+        self.images = images
         self.last_url = None
         self.last_access = None
         self.last_activity = None
@@ -111,19 +111,42 @@ class Container:
     def states(self):
         return [
             f"{container['id'][:12]} ({container['name']}): {container['state']}"
-            for container in self.containers
+            for container in self.images
         ]
 
-    async def boot(self):
+    async def start(self, stream=False):
+        return await run(
+            "docker",
+            "compose",
+            "-p",
+            self.name,
+            "start",
+            stream=stream,
+        )
+
+    async def stop(self, stream=False):
+        return await run(
+            "docker",
+            "compose",
+            "-p",
+            self.name,
+            "stop",
+            "--timeout",
+            "1",
+            stream=stream,
+        )
+
+    async def boot(self, stream=False):
         return await run(
             "docker",
             "compose",
             *self._configs(),
             "up",
             "-d",
+            stream=stream,
         )
 
-    async def rm(self):
+    async def rm(self, stream=False):
         return await run(
             "docker",
             "compose",
@@ -132,6 +155,7 @@ class Container:
             "--rmi",
             "local",
             "--volumes",
+            stream=stream,
         )
 
     async def kill(self):
@@ -175,6 +199,10 @@ class Container:
             r".*\| (?P<timestamp>(:?\d|-)+ (:?\d|-|:)+)(?:,\d+)? \d+ .+ "
             r'"(GET|POST|PUT|DELETE) (?P<url>\S+) HTTP.*'
         )
+        startup_re = re.compile(
+            r".*\| (?P<timestamp>(:?\d|-)+ (:?\d|-|:)+)(?:,\d+)? \d+ .+ "
+            r"running on (?P<url>\S+).*"
+        )
 
         stdout = await run(
             "docker",
@@ -185,6 +213,8 @@ class Container:
         lines = stdout.decode("utf-8").split("\n")
         for line in reversed(lines):
             match = access_re.match(line)
+            if not match:
+                match = startup_re.match(line)
             if match:
                 date = datetime.fromisoformat(match.group("timestamp"))
                 # assuming logs are in UTC
@@ -193,17 +223,18 @@ class Container:
                 self.last_access = date
                 return
 
+        self.last_access = "never"
         return stdout.decode("utf-8")
 
     async def get_last_activity(self):
-        for container in self.containers:
-            if container["state"] != "running":
+        for image in self.images:
+            if image["state"] != "running":
                 last_activity = await run(
                     "docker",
                     "inspect",
                     "-f",
                     "{{.State.FinishedAt}}",
-                    container["id"],
+                    image["id"],
                 )
                 last_activity = datetime.fromisoformat(
                     last_activity.decode("utf-8").strip()
@@ -213,3 +244,32 @@ class Container:
             else:
                 self.last_activity = "running"
                 return
+
+    @property
+    def has_stop_inactive_label(self):
+        label = config["stop_inactive"]["label"]
+
+        for image in self.images:
+            if image["labels"].get(label) == "true":
+                return True
+
+        return False
+
+    @property
+    def has_remove_obsolete_label(self):
+        label = config["remove_obsolete"]["label"]
+
+        for image in self.images:
+            if image["labels"].get(label) == "true":
+                return True
+
+        return False
+
+    @property
+    def flags(self):
+        flags = []
+        if self.has_stop_inactive_label:
+            flags.append("stop_inactive")
+        if self.has_remove_obsolete_label:
+            flags.append("remove_obsolete")
+        return flags

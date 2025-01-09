@@ -29,6 +29,7 @@ class Html:
 
     def __init__(self, request):
         self.request = request
+        self._in_code = False
 
     async def _init_(self):
         response = web.StreamResponse(
@@ -93,6 +94,9 @@ class Html:
         if isinstance(value, str):
             value = value.encode("utf-8")
 
+        if self._in_code:
+            value = value.replace(b"\n", b'</code><code style="display: block;">')
+
         await self.response.write(value)
 
     @asynccontextmanager
@@ -132,21 +136,21 @@ class Html:
         finally:
             await self.response.write_eof()
 
-    async def _with_scroll_(self):
-        async with self.script():
-            await self(
-                dedent("""
-                const autoScroll = setInterval(() => {
-                       window.scrollTo({top: document.body.scrollHeight, behavior: 'instant' });
-                }, 17);
-                window.addEventListener('wheel', () => {
-                       clearInterval(autoScroll);
-                 }, { once: true });
-                window.addEventListener('touchmove', () => {
-                          clearInterval(autoScroll);
-                  }, { once: true });
-                """)
-            )
+    @asynccontextmanager
+    async def _code_(self):
+        async with self.div(
+            style="display: flex;"
+            "flex-direction: column-reverse;"
+            "overflow-y: auto;"
+            "max-height: 90vh;"
+            "word-break: break-all;"
+            "font-size: 0.8em;"
+        ):
+            async with self.div():
+                async with self.code(style="display: block;"):
+                    self._in_code = True
+                    yield
+                    self._in_code = False
 
     async def _with_redirect_(self, url):
         async with self.footer():
@@ -157,7 +161,7 @@ class Html:
 
             if not url.startswith("http"):
                 # wait a bit before redirecting
-                await sleep(0.5)
+                await sleep(1)
             else:
                 # Wait for the client to be ready
                 for i in range(250):

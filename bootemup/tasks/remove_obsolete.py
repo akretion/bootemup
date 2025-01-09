@@ -21,7 +21,10 @@ async def loop(app):
             print("Running remove_obsolete task")
             containers = await get_containers()
             for container in containers:
-                if "running" in container.status:
+                if (
+                    not container.has_stop_inactive_label
+                    or "running" in container.status
+                ):
                     continue
 
                 await container.get_last_activity()
