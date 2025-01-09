@@ -207,7 +207,8 @@ class Container:
         stdout = await run(
             "docker",
             "compose",
-            *self._configs(),
+            "-p",
+            self.name,
             "logs",
         )
         lines = stdout.decode("utf-8").split("\n")
