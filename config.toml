@@ -1,12 +1,13 @@
 [server]
 dry_run = false  # Set to false to actually perform the actions (beware old containers will be deleted)
 disable_background_tasks = false
+disable_interface = false # Set to true to disable the home status page and log display
 
 [stop_inactive]
 inactive_threshold = 900 # 15 minutes
 check_interval = 60      # 1 minute
 label = "com.akretion.bootemup.stop_inactive"
-exclude_urls = ["/websocket", "/queue_job/.*"]
+exclude_urls = ["/queue_job/.*"]
 
 [remove_obsolete]
 obsolete_threshold = 1728000 # 20 days

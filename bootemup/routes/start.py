@@ -21,20 +21,21 @@ async def start(request):
 
             if request.path.endswith("/boot"):
                 await html(f"Killing, {name}...\n\n")
-                await html(await container.kill())
+                await html.maybe(await container.kill(), "ok\n")
                 await html(f"\nBooting, {name}...\n\n")
-                await html(await container.boot())
+                await html.maybe(await container.boot(), "ok\n")
             else:
                 await html(f"Starting, {name}...\n\n")
-                await html(await container.start())
+                await html.maybe(await container.start(), "ok\n")
 
             try:
                 async for log in container.logs(
                     break_on={"running on": False, "exited with code": True}, tail=1
                 ):
-                    await html(log)
+                    await html.maybe(log, ".")
+
             except Exception as e:
-                await html(str(e))
+                await html.maybe(str(e), "Error")
                 return html.response
 
         await html._with_redirect_(container.url)

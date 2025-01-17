@@ -9,14 +9,24 @@ from bootemup.tasks import remove_obsolete, stop_inactive
 
 
 app = web.Application()
+
+if config["server"]["disable_interface"]:
+    print("Web interface is disabled")
+
 app.add_routes(
     [
-        web.get("/", info),
         web.get("/start/{name}", start),
         web.get("/start/{name}/boot", start),
         web.get("/stop/{name}", stop),
-        web.get("/logs/{name}", logs),
     ]
+    + (
+        [
+            web.get("/", info),
+            web.get("/logs/{name}", logs),
+        ]
+        if not config["server"]["disable_interface"]
+        else []
+    )
 )
 if not config["server"]["disable_background_tasks"]:
     app.cleanup_ctx.append(remove_obsolete)

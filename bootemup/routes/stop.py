@@ -5,6 +5,7 @@ from asyncio import gather
 
 from ..container import Container
 from ..html import Html
+from ..config import config
 
 
 async def stop(request):
@@ -26,18 +27,21 @@ async def stop(request):
                 async for log in container.logs(
                     break_on={"exited with code": False}, tail=1
                 ):
-                    await html(log)
+                    await html.maybe(log, ".")
 
             async def stop():
                 async for log in (await container.stop(stream=True))():
-                    await html(log)
+                    await html.maybe(log, ".")
 
             try:
                 await gather(log(), stop())
             except Exception as e:
-                await html(str(e))
+                await html.maybe(str(e), "Error")
                 return html.response
 
-        await html._with_redirect_("/")
+        if config["server"]["disable_interface"]:
+            await html("ok")
+        else:
+            await html._with_redirect_("/")
 
     return html.response

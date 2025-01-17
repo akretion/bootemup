@@ -8,6 +8,8 @@ from asyncio import sleep
 from inspect import cleandoc as dedent
 from datetime import datetime
 
+from .config import config
+
 
 class Html:
     __self_closing_tags__ = [
@@ -98,6 +100,13 @@ class Html:
             value = value.replace(b"\n", b'</code><code style="display: block;">')
 
         await self.response.write(value)
+
+    async def maybe(self, value, no_interface):
+        if no_interface:
+            # Log to console when interface is disabled
+            print(">", value.decode("utf-8"))
+
+        await self(no_interface if config["server"]["disable_interface"] else value)
 
     @asynccontextmanager
     async def _page_(self, full_width=False):
